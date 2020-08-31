@@ -11,39 +11,45 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
-using Microsoft.InformationProtectionAndControl;
+
+using Microsoft.InformationProtection;
 
 namespace RmsFileWatcher
 {
     public partial class FormRmsFileWatcher : Form
     {
-        private const int           waitPeriodToProcess = 5000;        // 5000 ms between notification and processing, minimum
+        private const int           waitPeriodToProcess = 5000;        // 5s between notification and processing, minimum
 
         FileWatchEngine             fileWatchEngine;
-        Collection<TemplateInfo>    policyList;
-        TemplateInfo                currentProtectionPolicy;
+        Action                      action;
+        IEnumerable<Microsoft.InformationProtection.Label> labels;
+        Microsoft.InformationProtection.Label currentProtectionPolicy;
 
         // configuration file parameters
 
         private const string        settingPolicy = "Policy";
         private const string        settingPathCount = "PathCount";
+        private const string        settingUnprotectPathCount = "UnprotectPathCount";
         private const string        settingPath = "Path";
+        private const string        settingUnprotectPath = "UnprotectPath";
 
-        public FormRmsFileWatcher()
+        public FormRmsFileWatcher(ApplicationInfo appInfo)
         {
             InitializeComponent();
 
             buttonCollapseLog.Tag = false;
-            policyList = null;
+            labels = null;
             currentProtectionPolicy = null;
 
             fileWatchEngine = new FileWatchEngine();
             fileWatchEngine.MillisecondsBeforeProcessing = waitPeriodToProcess;
             fileWatchEngine.EngineEvent += fileWatchEngine_EngineEvent;
 
-            SafeNativeMethods.IpcInitialize();
+            // Initialize Action class, passing in AppInfo.
+            action = new Action(appInfo);
+
             populatePolicyList();
-            
+
             setFormStateFromConfiguration();
         }
 
@@ -131,16 +137,33 @@ namespace RmsFileWatcher
             }
         }
 
+        private void buttonUndo_Click(object sender, EventArgs e)
+        {
+            FolderBrowserDialog dialogFolderBrowser;
+            DialogResult result;
+
+            dialogFolderBrowser = new FolderBrowserDialog();
+            dialogFolderBrowser.Description = "Choose a folder to watch for files to un-protect...";
+
+            result = dialogFolderBrowser.ShowDialog();
+            if (result == DialogResult.OK)
+            {
+                fileWatchEngine.AddWatchedDirectory(dialogFolderBrowser.SelectedPath);
+                listBoxUnprotect.Items.Add(dialogFolderBrowser.SelectedPath);
+            }
+        }
+
         /// <summary>
         /// Handle Form Closing event to save configuration state.
         /// </summary>
         private void FormFileWatcher_FormClosing(object sender, FormClosingEventArgs e)
         {
             string[]    pathsToWatch;
+            string[] pathsToUnprotect;
             string      policyToApply;
 
-            readConfigurationFromFormState(out pathsToWatch, out policyToApply);
-            saveConfiguration(pathsToWatch, policyToApply);
+            readConfigurationFromFormState(out pathsToWatch, out policyToApply, out pathsToUnprotect);
+            saveConfiguration(pathsToWatch, policyToApply, pathsToUnprotect);
         }
 
         /// <summary>
@@ -184,19 +207,53 @@ namespace RmsFileWatcher
             {
                 this.Invoke(new AppendToLog(doAppendToLog), e.NotificationType.ToString() + ": " + e.FullPath + "...");
 
-                if (currentProtectionPolicy != null &&
-                    SafeFileApiNativeMethods.IpcfIsFileEncrypted(e.FullPath) == SafeFileApiNativeMethods.FileEncryptedStatus.IPCF_FILE_STATUS_DECRYPTED)
+                // append 'p' to file extension to denote as protected
+                //String[] outputPath = e.FullPath.Split('.');
+                //outputPath[outputPath.Length - 1] = "p" + outputPath[outputPath.Length - 1];
+                //String outFile = String.Join(".", outputPath);
+                String[] outputPath = e.FullPath.Split('\\');
+
+                // create 'protected' dir if it doesn't exist
+                //Directory.CreateDirectory();
+
+                //outputPath[outputPath.Length - 1] = "protected\\" + outputPath[outputPath.Length - 1];
+                //String outFile = String.Join("\\", outputPath);
+
+                String tmpFilePath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+
+                //String outFile = e.FullPath;
+                Action.FileOptions options = new Action.FileOptions
                 {
-                    SafeFileApiNativeMethods.IpcfEncryptFile(e.FullPath,
-                                                             currentProtectionPolicy.TemplateId,
-                                                             SafeFileApiNativeMethods.EncryptFlags.IPCF_EF_FLAG_DEFAULT,
-                                                             true,
-                                                             false,
-                                                             true,
-                                                             this);
+                    FileName = e.FullPath,
+                    OutputName = tmpFilePath,
+                    ActionSource = ActionSource.Manual,
+                    AssignmentMethod = AssignmentMethod.Standard,
+                    DataState = DataState.Rest,
+                    GenerateChangeAuditEvent = true,
+                    IsAuditDiscoveryEnabled = true,
+                    LabelId = currentProtectionPolicy.Id
+                };
+
+                this.Invoke(new AppendToLog(doAppendToLog), "Checking for existing Label" + "\r\n");
+
+                ContentLabel currLabel = action.GetLabel(options);
+
+                if(currLabel != null)
+                  this.Invoke(new AppendToLog(doAppendToLog), "Already Protected!\r\n");
+
+                if (currentProtectionPolicy != null &&
+                    currLabel == null)
+                {
+                    this.Invoke(new AppendToLog(doAppendToLog), "Setting Label and saving to " + tmpFilePath + "\r\n");
+                    action.SetLabel(options);
+                    this.Invoke(new AppendToLog(doAppendToLog), "Replacing file with protected version" + "\r\n");
+                    File.Delete(e.FullPath);
+                    this.Invoke(new AppendToLog(doAppendToLog), "Deleted old " + "\r\n");
+                    File.Copy(tmpFilePath, e.FullPath);
+                    this.Invoke(new AppendToLog(doAppendToLog), "Protected!\r\n");
                 }
 
-                this.Invoke(new AppendToLog(doAppendToLog), "Protected!\r\n");
+                
             }
             else
             {
@@ -211,7 +268,7 @@ namespace RmsFileWatcher
         {
             if (comboBoxTemplates.SelectedIndex != -1)
             {
-                currentProtectionPolicy = findTemplate((string)comboBoxTemplates.SelectedItem);
+                currentProtectionPolicy = findLabel((string)comboBoxTemplates.SelectedItem);
             }
         }
 
@@ -225,9 +282,10 @@ namespace RmsFileWatcher
         private void setFormStateFromConfiguration()
         {
             string[]    pathsToWatch;
+            string[]    pathsToUnprotect;
             string      policyToApply;
 
-            loadConfiguration(out pathsToWatch, out policyToApply);
+            loadConfiguration(out pathsToWatch, out policyToApply, out pathsToUnprotect);
 
             if (pathsToWatch != null)
             {
@@ -237,7 +295,14 @@ namespace RmsFileWatcher
                     fileWatchEngine.AddWatchedDirectory(s);
                 }
             }
-
+            if (pathsToUnprotect != null)
+            {
+                foreach (string s in pathsToUnprotect)
+                {
+                    listBoxUnprotect.Items.Add(s);
+                    fileWatchEngine.AddWatchedDirectory(s);
+                }
+            }
             if (policyToApply != "")
             {
                 comboBoxTemplates.SelectedItem = policyToApply;
@@ -247,9 +312,10 @@ namespace RmsFileWatcher
         /// <summary>
         /// Read configuration from the current form state.
         /// </summary>
-        private void readConfigurationFromFormState(out string[] pathsToWatch, out string policyToApply)
+        private void readConfigurationFromFormState(out string[] pathsToWatch, out string policyToApply, out string[] pathsToUnprotect)
         {
             pathsToWatch = null;
+            pathsToUnprotect = null;
             if (listBoxWatch.Items.Count > 0)
             {
                 pathsToWatch = new string[listBoxWatch.Items.Count];
@@ -259,6 +325,14 @@ namespace RmsFileWatcher
                 }
             }
 
+            if (listBoxUnprotect.Items.Count > 0)
+            {
+                pathsToUnprotect = new string[listBoxUnprotect.Items.Count];
+                for (int i = 0; i < listBoxUnprotect.Items.Count; i++)
+                {
+                    pathsToUnprotect[i] = (string)listBoxUnprotect.Items[i];
+                }
+            }
             policyToApply = "";
             if (comboBoxTemplates.SelectedIndex > 0)
             {
@@ -272,36 +346,33 @@ namespace RmsFileWatcher
         /// </summary>
         private void populatePolicyList()
         {
-            policyList = SafeNativeMethods.IpcGetTemplateList(null,
-                                                              false,
-                                                              true,
-                                                              false,
-                                                              true,
-                                                              this,
-                                                              System.Globalization.CultureInfo.CurrentCulture);
+
+            // List all labels available to the engine created in Action
+            labels = action.ListLabels();
+            
 
             comboBoxTemplates.BeginUpdate();
             comboBoxTemplates.Items.Add("-- Choose a policy --");
 
-            foreach (TemplateInfo ti in policyList)
+            foreach (Microsoft.InformationProtection.Label label in labels)
             {
-                comboBoxTemplates.Items.Add(ti.Name);
+                comboBoxTemplates.Items.Add(label.Name);
             }
 
             comboBoxTemplates.SelectedIndex = 0;
             comboBoxTemplates.EndUpdate();
         }
 
-        private TemplateInfo findTemplate(string s)
+        private Microsoft.InformationProtection.Label findLabel(string s)
         {
-            TemplateInfo    item;
+            Microsoft.InformationProtection.Label item;
 
             item = null;
-            foreach (TemplateInfo ti in policyList)
+            foreach (Microsoft.InformationProtection.Label label in labels)
             {
-                if (ti.Name == s)
+                if (label.Name == s)
                 {
-                    item = ti;
+                    item = label;
                 }
             }
 
@@ -318,12 +389,13 @@ namespace RmsFileWatcher
         /// <summary>
         /// Load state from application configuration file.
         /// </summary>
-        private void loadConfiguration(out string[] pathsToWatch, out string policyToApply)
+        private void loadConfiguration(out string[] pathsToWatch, out string policyToApply, out string[] pathsToUnprotect)
         {
             NameValueCollection nvc;
 
             policyToApply = "";
             pathsToWatch = null;
+            pathsToUnprotect = null;
 
             nvc = (NameValueCollection)ConfigurationManager.AppSettings;
             if (nvc.AllKeys.Contains(settingPolicy))
@@ -348,28 +420,68 @@ namespace RmsFileWatcher
                     }
                 }
             }
+            if (nvc.AllKeys.Contains(settingUnprotectPathCount))
+            {
+                int pathCount;
+
+                pathCount = System.Convert.ToInt32(nvc[settingUnprotectPathCount]);
+                pathsToUnprotect = new string[pathCount];
+                for (int i = 0; i < pathCount; i++)
+                {
+                    string key;
+
+                    key = settingUnprotectPath + i.ToString();
+                    if (nvc.AllKeys.Contains(key))
+                    {
+                        pathsToUnprotect[i] = nvc[key];
+                    }
+                }
+            }
         }
 
         /// <summary>
         /// Save state to the application configuration file.
         /// </summary>
-        private void saveConfiguration(string[] pathsToWatch, string policyToApply)
+        private void saveConfiguration(string[] pathsToWatch, string policyToApply, string[] pathsToUnprotect)
         {
             Configuration       appConfig;
             AppSettingsSection  appSettings;
 
             appConfig = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
             appSettings = appConfig.AppSettings;
+            NameValueCollection nvc = (NameValueCollection)ConfigurationManager.AppSettings;
+            int prevPathCount = System.Convert.ToInt32(nvc[settingPathCount]);
+            for (int i = 0; i < prevPathCount; i++)
+            {
+                appSettings.Settings.Remove(settingPath + i.ToString());
+            }
+            //Unprotect
+            prevPathCount = System.Convert.ToInt32(nvc[settingUnprotectPathCount]);
+            for (int i = 0; i < prevPathCount; i++)
+            {
+                appSettings.Settings.Remove(settingUnprotectPath + i.ToString());
+            }
+            appSettings.Settings.Remove(settingPolicy);
+            appSettings.Settings.Remove(settingPathCount);
+            appSettings.Settings.Remove(settingUnprotectPathCount);
 
-            appSettings.Settings.Clear();
             appSettings.Settings.Add(settingPolicy, policyToApply);
-
+            //protect these
             if (pathsToWatch != null)
             {
                 appSettings.Settings.Add(settingPathCount, pathsToWatch.Length.ToString());
                 for (int i = 0; i < pathsToWatch.Length; i++)
                 {
                     appSettings.Settings.Add(settingPath + i.ToString(), pathsToWatch[i]);
+                }
+            }
+            //unprotect these
+            if (pathsToUnprotect != null)
+            {
+                appSettings.Settings.Add(settingUnprotectPathCount, pathsToUnprotect.Length.ToString());
+                for (int i = 0; i < pathsToUnprotect.Length; i++)
+                {
+                    appSettings.Settings.Add(settingUnprotectPath + i.ToString(), pathsToUnprotect[i]);
                 }
             }
 

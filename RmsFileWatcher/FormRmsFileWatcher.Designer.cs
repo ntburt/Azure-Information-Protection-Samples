@@ -30,11 +30,14 @@
         {
             this.components = new System.ComponentModel.Container();
             this.labelWatch = new System.Windows.Forms.Label();
+            this.labelUnprotect = new System.Windows.Forms.Label();
             this.listBoxWatch = new System.Windows.Forms.ListBox();
+            this.listBoxUnprotect = new System.Windows.Forms.ListBox();
             this.buttonDelete = new System.Windows.Forms.Button();
             this.textBoxLog = new System.Windows.Forms.TextBox();
             this.labelLog = new System.Windows.Forms.Label();
             this.buttonPlayPause = new System.Windows.Forms.Button();
+            this.buttonUndo = new System.Windows.Forms.Button();
             this.buttonCollapseLog = new System.Windows.Forms.Button();
             this.buttonAdd = new System.Windows.Forms.Button();
             this.comboBoxTemplates = new System.Windows.Forms.ComboBox();
@@ -52,6 +55,15 @@
             this.labelWatch.TabIndex = 0;
             this.labelWatch.Text = "Watch these directories:";
             // 
+            // labelUnprotect
+            // 
+            this.labelUnprotect.AutoSize = true;
+            this.labelUnprotect.Location = new System.Drawing.Point(12, 79);
+            this.labelUnprotect.Name = "labelUnprotect";
+            this.labelUnprotect.Size = new System.Drawing.Size(169, 13);
+            this.labelUnprotect.TabIndex = 0;
+            this.labelUnprotect.Text = "Unprotect files in these directories:";
+            // 
             // listBoxWatch
             // 
             this.listBoxWatch.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
@@ -59,9 +71,20 @@
             this.listBoxWatch.FormattingEnabled = true;
             this.listBoxWatch.Location = new System.Drawing.Point(12, 30);
             this.listBoxWatch.Name = "listBoxWatch";
-            this.listBoxWatch.Size = new System.Drawing.Size(427, 95);
+            this.listBoxWatch.Size = new System.Drawing.Size(427, 43);
             this.listBoxWatch.TabIndex = 1;
             this.toolTips.SetToolTip(this.listBoxWatch, "The list of directories to watch for file changes.");
+            // 
+            // listBoxUnprotect
+            // 
+            this.listBoxUnprotect.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.listBoxUnprotect.FormattingEnabled = true;
+            this.listBoxUnprotect.Location = new System.Drawing.Point(12, 95);
+            this.listBoxUnprotect.Name = "listBoxUnprotect";
+            this.listBoxUnprotect.Size = new System.Drawing.Size(427, 30);
+            this.listBoxUnprotect.TabIndex = 1;
+            this.toolTips.SetToolTip(this.listBoxUnprotect, "The list of directories to watch for files to unprotect.");
             // 
             // buttonDelete
             // 
@@ -106,6 +129,17 @@
             this.toolTips.SetToolTip(this.buttonPlayPause, "Start/Stop watching all directories.");
             this.buttonPlayPause.UseVisualStyleBackColor = true;
             this.buttonPlayPause.Click += new System.EventHandler(this.buttonPlayPause_Click);
+            // 
+            // buttonUndo
+            // 
+            this.buttonUndo.Image = global::RmsFileWatcher.Properties.Resources.Undo;
+            this.buttonUndo.Location = new System.Drawing.Point(120, 131);
+            this.buttonUndo.Name = "buttonUndo";
+            this.buttonUndo.Size = new System.Drawing.Size(30, 30);
+            this.buttonUndo.TabIndex = 8;
+            this.toolTips.SetToolTip(this.buttonUndo, "Set directory that will unprotect files.");
+            this.buttonUndo.UseVisualStyleBackColor = true;
+            this.buttonUndo.Click += new System.EventHandler(this.buttonUndo_Click);
             // 
             // buttonCollapseLog
             // 
@@ -155,7 +189,7 @@
             this.timerProcessChanges.Interval = 5000;
             this.timerProcessChanges.Tick += new System.EventHandler(this.timerProcessChanges_Tick);
             // 
-            // FormFileWatcher
+            // FormRmsFileWatcher
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -163,17 +197,20 @@
             this.Controls.Add(this.label1);
             this.Controls.Add(this.comboBoxTemplates);
             this.Controls.Add(this.buttonPlayPause);
+            this.Controls.Add(this.buttonUndo);
             this.Controls.Add(this.buttonCollapseLog);
             this.Controls.Add(this.labelLog);
             this.Controls.Add(this.textBoxLog);
             this.Controls.Add(this.buttonDelete);
             this.Controls.Add(this.buttonAdd);
             this.Controls.Add(this.listBoxWatch);
+            this.Controls.Add(this.listBoxUnprotect);
             this.Controls.Add(this.labelWatch);
+            this.Controls.Add(this.labelUnprotect);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
             this.MinimumSize = new System.Drawing.Size(372, 430);
-            this.Name = "FormFileWatcher";
+            this.Name = "FormRmsFileWatcher";
             this.Text = "RMS File Watcher";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.FormFileWatcher_FormClosing);
             this.ResumeLayout(false);
@@ -184,13 +221,16 @@
         #endregion
 
         private System.Windows.Forms.Label labelWatch;
+        private System.Windows.Forms.Label labelUnprotect;
         private System.Windows.Forms.ListBox listBoxWatch;
+        private System.Windows.Forms.ListBox listBoxUnprotect;
         private System.Windows.Forms.Button buttonAdd;
         private System.Windows.Forms.Button buttonDelete;
         private System.Windows.Forms.TextBox textBoxLog;
         private System.Windows.Forms.Label labelLog;
         private System.Windows.Forms.Button buttonCollapseLog;
         private System.Windows.Forms.Button buttonPlayPause;
+        private System.Windows.Forms.Button buttonUndo;
         private System.Windows.Forms.ComboBox comboBoxTemplates;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.ToolTip toolTips;
