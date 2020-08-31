@@ -230,7 +230,59 @@ namespace RmsFileWatcher
 
             return result;
         }
-                
+
+        /// <summary>
+        /// Set the label on the given file. 
+        /// Options for the labeling operation are provided in the FileOptions parameter.
+        /// </summary>
+        /// <param name="options">Details about file input, output, label to apply, etc.</param>
+        /// <returns></returns>
+        public bool DeleteLabel(FileOptions options)
+        {
+
+            // LabelingOptions allows us to set the metadata associated with the labeling operations.
+            // Review the API Spec at https://aka.ms/mipsdkdocs for details
+            LabelingOptions labelingOptions = new LabelingOptions()
+            {
+                AssignmentMethod = options.AssignmentMethod
+            };
+
+            var handler = CreateFileHandler(options);
+
+            // Use the SetLabel method on the handler, providing label ID and LabelingOptions
+            // The handler already references a file, so those details aren't needed.
+
+            try
+            {
+                handler.DeleteLabel(labelingOptions);
+            }
+
+            catch (Microsoft.InformationProtection.Exceptions.JustificationRequiredException)
+            {
+                Console.Write("Please provide justification: ");
+                string justification = Console.ReadLine();
+
+                labelingOptions.IsDowngradeJustified = true;
+                labelingOptions.JustificationMessage = justification;
+
+                handler.DeleteLabel(labelingOptions);
+            }
+
+
+            // The change isn't committed to the file referenced by the handler until CommitAsync() is called.
+            // Pass the desired output file name in to the CommitAsync() function.
+            var result = Task.Run(async () => await handler.CommitAsync(options.OutputName)).Result;
+
+            // If the commit was successful and GenerateChangeAuditEvents is true, call NotifyCommitSuccessful()
+            if (result && options.GenerateChangeAuditEvent)
+            {
+                // Submits and audit event about the labeling action to Azure Information Protection Analytics 
+                handler.NotifyCommitSuccessful(options.FileName);
+            }
+
+            return result;
+        }
+
         /// <summary>
         /// Read the label from a file provided via FileOptions.
         /// </summary>

@@ -114,6 +114,19 @@ namespace RmsFileWatcher
         }
 
         /// <summary>
+        /// Handle Delete folder button, remove a selected folder from the watched folders
+        /// list.
+        /// </summary>
+        private void buttonDeleteUnprotect_Click(object sender, EventArgs e)
+        {
+            if (listBoxUnprotect.SelectedIndex != -1)
+            {
+                fileWatchEngine.RemoveWatchedDirectory((string)listBoxUnprotect.SelectedItem);
+                listBoxUnprotect.Items.Remove(listBoxUnprotect.SelectedItem);
+            }
+        }
+
+        /// <summary>
         /// Handle Play button to start processing changes in the watched folders list.
         /// </summary>
         private void buttonPlayPause_Click(object sender, EventArgs e)
@@ -159,7 +172,7 @@ namespace RmsFileWatcher
         private void FormFileWatcher_FormClosing(object sender, FormClosingEventArgs e)
         {
             string[]    pathsToWatch;
-            string[] pathsToUnprotect;
+            string[]    pathsToUnprotect;
             string      policyToApply;
 
             readConfigurationFromFormState(out pathsToWatch, out policyToApply, out pathsToUnprotect);
@@ -238,22 +251,53 @@ namespace RmsFileWatcher
 
                 ContentLabel currLabel = action.GetLabel(options);
 
-                if(currLabel != null)
-                  this.Invoke(new AppendToLog(doAppendToLog), "Already Protected!\r\n");
+                Boolean doProtect = true;
+                // determine if this file should be protected or unprotected
+                if(listBoxUnprotect.Items.Count > 0)
+                { 
+                    for (int i = 0; i < listBoxUnprotect.Items.Count; i++)
+                    {
+                        String path = (string)listBoxUnprotect.Items[i];
+                        if(e.FullPath.StartsWith(path))
+                        {
+                            doProtect = false;
+                            break;
+                        }
+                    }
+                }
 
-                if (currentProtectionPolicy != null &&
-                    currLabel == null)
+                ////
+                if (doProtect)
                 {
-                    this.Invoke(new AppendToLog(doAppendToLog), "Setting Label and saving to " + tmpFilePath + "\r\n");
-                    action.SetLabel(options);
-                    this.Invoke(new AppendToLog(doAppendToLog), "Replacing file with protected version" + "\r\n");
+                    if (currLabel != null)
+                        this.Invoke(new AppendToLog(doAppendToLog), "Already Protected!\r\n");
+
+                    if (currentProtectionPolicy != null && currLabel == null)
+                    {
+                        this.Invoke(new AppendToLog(doAppendToLog), "Setting Label and saving to " + tmpFilePath + "\r\n");
+                        action.SetLabel(options);
+                        this.Invoke(new AppendToLog(doAppendToLog), "Replacing file with protected version" + "\r\n");
+                        File.Delete(e.FullPath);
+                        this.Invoke(new AppendToLog(doAppendToLog), "Deleted old " + "\r\n");
+                        File.Copy(tmpFilePath, e.FullPath);
+                        this.Invoke(new AppendToLog(doAppendToLog), "Protected!\r\n");
+                    }
+
+                } else { // Unprotect the file
+
+                    if (currLabel == null)
+                        this.Invoke(new AppendToLog(doAppendToLog), "Already NOT Protected!\r\n");
+
+                    this.Invoke(new AppendToLog(doAppendToLog), "Unprotect this file \r\n");
+                    options.LabelId = null; // remove label??
+                    this.Invoke(new AppendToLog(doAppendToLog), "Removing Label and saving to " + tmpFilePath + "\r\n");
+                    action.DeleteLabel(options);
+                    this.Invoke(new AppendToLog(doAppendToLog), "Replacing file with unprotected version" + "\r\n");
                     File.Delete(e.FullPath);
                     this.Invoke(new AppendToLog(doAppendToLog), "Deleted old " + "\r\n");
                     File.Copy(tmpFilePath, e.FullPath);
-                    this.Invoke(new AppendToLog(doAppendToLog), "Protected!\r\n");
+                    this.Invoke(new AppendToLog(doAppendToLog), "Protection Removed!\r\n");
                 }
-
-                
             }
             else
             {

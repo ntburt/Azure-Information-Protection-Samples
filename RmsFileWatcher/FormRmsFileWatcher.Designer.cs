@@ -34,6 +34,7 @@
             this.listBoxWatch = new System.Windows.Forms.ListBox();
             this.listBoxUnprotect = new System.Windows.Forms.ListBox();
             this.buttonDelete = new System.Windows.Forms.Button();
+            this.buttonDeleteUnprotect = new System.Windows.Forms.Button();
             this.textBoxLog = new System.Windows.Forms.TextBox();
             this.labelLog = new System.Windows.Forms.Label();
             this.buttonPlayPause = new System.Windows.Forms.Button();
@@ -97,6 +98,17 @@
             this.buttonDelete.UseVisualStyleBackColor = true;
             this.buttonDelete.Click += new System.EventHandler(this.buttonDelete_Click);
             // 
+            // buttonDeleteUnprotect
+            // 
+            this.buttonDeleteUnprotect.Image = global::RmsFileWatcher.Properties.Resources.X;
+            this.buttonDeleteUnprotect.Location = new System.Drawing.Point(158, 131);
+            this.buttonDeleteUnprotect.Name = "buttonDeleteUnprotect";
+            this.buttonDeleteUnprotect.Size = new System.Drawing.Size(30, 30);
+            this.buttonDeleteUnprotect.TabIndex = 3;
+            this.toolTips.SetToolTip(this.buttonDeleteUnprotect, "Stop unprotecting the selected directory.");
+            this.buttonDeleteUnprotect.UseVisualStyleBackColor = true;
+            this.buttonDeleteUnprotect.Click += new System.EventHandler(this.buttonDeleteUnprotect_Click);
+            // 
             // textBoxLog
             // 
             this.textBoxLog.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
@@ -133,7 +145,7 @@
             // buttonUndo
             // 
             this.buttonUndo.Image = global::RmsFileWatcher.Properties.Resources.Undo;
-            this.buttonUndo.Location = new System.Drawing.Point(120, 131);
+            this.buttonUndo.Location = new System.Drawing.Point(122, 131);
             this.buttonUndo.Name = "buttonUndo";
             this.buttonUndo.Size = new System.Drawing.Size(30, 30);
             this.buttonUndo.TabIndex = 8;
@@ -202,6 +214,7 @@
             this.Controls.Add(this.labelLog);
             this.Controls.Add(this.textBoxLog);
             this.Controls.Add(this.buttonDelete);
+            this.Controls.Add(this.buttonDeleteUnprotect);
             this.Controls.Add(this.buttonAdd);
             this.Controls.Add(this.listBoxWatch);
             this.Controls.Add(this.listBoxUnprotect);
@@ -226,6 +239,7 @@
         private System.Windows.Forms.ListBox listBoxUnprotect;
         private System.Windows.Forms.Button buttonAdd;
         private System.Windows.Forms.Button buttonDelete;
+        private System.Windows.Forms.Button buttonDeleteUnprotect;
         private System.Windows.Forms.TextBox textBoxLog;
         private System.Windows.Forms.Label labelLog;
         private System.Windows.Forms.Button buttonCollapseLog;
