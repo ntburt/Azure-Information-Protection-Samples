@@ -106,22 +106,10 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Pause.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Play.png" />
-  </ItemGroup>
-  <ItemGroup>
     <None Include="Collapse.png" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Expand.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Plus.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="X.png" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.IdentityModel.Clients.ActiveDirectory">
@@ -150,6 +138,10 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Plus.png" />
+    <Content Include="Pause.png" />
+    <Content Include="Play.png" />
+    <Content Include="X.png" />
     <Content Include="Undo.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
