@@ -286,8 +286,10 @@ namespace RmsFileWatcher
                 } else { // Unprotect the file
 
                     if (currLabel == null)
+                    {
                         this.Invoke(new AppendToLog(doAppendToLog), "Already NOT Protected!\r\n");
-
+                        return;
+                    }
                     this.Invoke(new AppendToLog(doAppendToLog), "Unprotect this file \r\n");
                     options.LabelId = null; // remove label??
                     this.Invoke(new AppendToLog(doAppendToLog), "Removing Label and saving to " + tmpFilePath + "\r\n");
