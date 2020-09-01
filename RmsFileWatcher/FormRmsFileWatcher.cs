@@ -402,7 +402,17 @@ namespace RmsFileWatcher
 
             foreach (Microsoft.InformationProtection.Label label in labels)
             {
-                comboBoxTemplates.Items.Add(label.Name);
+                if(label.Children.Count > 0)
+                {
+                    //handle sublabels
+                    foreach (Microsoft.InformationProtection.Label sublabel in label.Children)
+                    {
+                        comboBoxTemplates.Items.Add(sublabel.Name);
+                    }
+                }
+                else { 
+                    comboBoxTemplates.Items.Add(label.Name);
+                }
             }
 
             comboBoxTemplates.SelectedIndex = 0;
@@ -419,6 +429,17 @@ namespace RmsFileWatcher
                 if (label.Name == s)
                 {
                     item = label;
+                    break;
+                } else if (label.Children.Count > 0)
+                {  // handle sublabels
+                    foreach (Microsoft.InformationProtection.Label sublabel in label.Children)
+                    {
+                        if(sublabel.Name == s )
+                        {
+                            item = sublabel;
+                            break;
+                        }
+                    }
                 }
             }
 
